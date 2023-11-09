@@ -48,7 +48,7 @@ static float accel_override = 0;
 static int override_brake = 0;
 static float brake_override = 0;
 static int override_steering = 0;
-static short int steering_overrride = 0;
+static short int steering_override = 0;
 
 static unsigned char outer_deadzone = 110;
 static unsigned char inner_deadzone = 10;
@@ -97,6 +97,7 @@ if(logfd > 0){ \
 
 u32 offset_digital_to_analog = 0;
 u32 offset_populate_car_digital_control = 0;
+u32 offset_populate_car_analog_control = 0;
 
 #define HIJACK_FUNCTION(a, f, ptr) \
 { \
@@ -323,12 +324,18 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 		u32 timestamp = pad_data->TimeStamp;
 		#endif // VERBOSE
 
-		int val = 0;
+		override_brake = 0;
+		override_accel = 0;
+		override_steering = 0;
 
 		// right
 		if(lx > 128){
 			int val = lx - 128;
 			val = apply_deadzone(val);
+			if(val != 0){
+				override_steering = 1;
+				steering_override = (0x2000 * val / 127) * -1;
+			}
 		}
 		// left
 		if(lx < 128){
@@ -337,9 +344,11 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 				val = 127;
 			}
 			val = apply_deadzone(val);
+			if(val != 0){
+				override_steering = 1;
+				steering_override = 0x2000 * val / 127;
+			}
 		}
-		override_brake = 0;
-		override_accel = 0;
 
 		// down
 		if(ry > 128){
@@ -348,7 +357,6 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 			if(val != 0){
 				override_brake = 1;
 				brake_override = (float)val / 127.0f;
-				//LOG("setting brake override to %f\n", brake_override);
 			}
 		}
 		// up
@@ -361,7 +369,6 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 			if(val != 0){
 				override_accel = 1;
 				accel_override = (float)val / 127.0f;
-				//LOG("setting accel override to %f\n", accel_override);
 			}
 		}
 
@@ -401,6 +408,7 @@ int set_offsets(char *disc_id){
 	if(strcmp("UCES01245", disc_id) == 0){
 		offset_digital_to_analog = game_base_addr + 0x14eb40;
 		offset_populate_car_digital_control = game_base_addr + 0x126b50;
+		offset_populate_car_analog_control = game_base_addr + 0x126dec;
 		return 0;
 	}
 
@@ -444,6 +452,18 @@ void populate_car_digital_control_patched(unsigned char *param_1, u32 param_2, u
 	}
 }
 
+static void (*populate_car_analog_control_orig)(u32 param_1, int *param_2, unsigned char *param_3, u32 param_4, u32 param_5, unsigned char param_6);
+void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned char *param_3, u32 param_4, u32 param_5, unsigned char param_6){
+	short *steering = (short *)(&param_3[4]);
+
+	populate_car_analog_control_orig(param_1, param_2, param_3, param_4, param_5, param_6);
+
+	if(override_steering){
+		param_3[1] = (unsigned char)*param_2;
+		*steering = steering_override;
+	}
+}
+
 int main_thread(SceSize args, void *argp){
 	LOG("main thread begins\n");
 
@@ -471,6 +491,7 @@ int main_thread(SceSize args, void *argp){
 
 	HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);
 	HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
+	HIJACK_FUNCTION(offset_populate_car_analog_control, populate_car_analog_control_patched, populate_car_analog_control_orig);
 
 	u32 sceCtrlReadBufferPositive_addr = (u32)sceCtrlReadBufferPositive;
 

@@ -44,13 +44,13 @@ static int is_emulator;
 static u32 game_base_addr = 0;
 
 static int override_accel = 0;
-static float accel_override = 0;
+static int accel_override = 0;
 static int override_brake = 0;
-static float brake_override = 0;
+static int brake_override = 0;
 static int override_steering = 0;
 static short int steering_override = 0;
 
-static unsigned char outer_deadzone = 110;
+static unsigned char outer_deadzone = 100;
 static unsigned char inner_deadzone = 10;
 
 static u32 MakeSyscallStub(void *function) {
@@ -346,7 +346,7 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 			val = apply_deadzone(val);
 			if(val != 0){
 				override_steering = 1;
-				steering_override = 0x2000 * val / 127;
+				steering_override = (0x2000 * val / 127);
 			}
 		}
 
@@ -356,10 +356,7 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 			val = apply_deadzone(val);
 			if(val != 0){
 				override_brake = 1;
-				brake_override = (float)val / 127.0f;
-				if(brake_override > 1.0){
-					brake_override = 1.0;
-				}
+				brake_override = val;
 			}
 		}
 		// up
@@ -371,10 +368,7 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 			val = apply_deadzone(val);
 			if(val != 0){
 				override_accel = 1;
-				accel_override = (float)val / 127.0f;
-				if(accel_override > 1.0){
-					accel_override = 1.0;
-				}
+				accel_override = val;
 			}
 		}
 
@@ -422,6 +416,7 @@ int set_offsets(char *disc_id){
 	return -1;
 }
 
+// this maps way smoother than trying to go through the ps3 path, but then it breaks replay and ghost
 static void (*digital_to_analog_orig)(u32 *param_1, u32 *param_2);
 void digital_to_analog_patched(u32 *param_1, u32 *param_2){
 	float *accel = (float *)((u32)(param_1[2]) + 0x530);
@@ -433,11 +428,17 @@ void digital_to_analog_patched(u32 *param_1, u32 *param_2){
 
 	digital_to_analog_orig(param_1, param_2);
 	if(*accel_as_int != 0 && override_accel){
-		*accel = accel_override;
+		*accel = (float)accel_override / 127.0f;
+		if(*accel > 1.0){
+			*accel = 1.0;
+		}
 	}
 
 	if(*brake_as_int != 0 && override_brake){
-		*brake = brake_override;
+		*brake = (float)brake_override / 127.0f;
+		if(*brake > 1.0){
+			*brake = 1.0;
+		}
 	}
 }
 
@@ -460,13 +461,35 @@ void populate_car_digital_control_patched(unsigned char *param_1, u32 param_2, u
 
 static void (*populate_car_analog_control_orig)(u32 param_1, int *param_2, unsigned char *param_3, u32 param_4, u32 param_5, unsigned char param_6);
 void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned char *param_3, u32 param_4, u32 param_5, unsigned char param_6){
-	short *steering = (short *)(&param_3[4]);
+	short *steering = (short *)(&param_3[4]); // +- 0x2000 int
+	//float *camera_rotation = (float *)(&param_3[0x2c]); // +- 32767.0 float
+	short *throttle = (short *)(&param_3[0x8]);
+	short *brake = (short *)(&param_3[0xA]);
 
 	populate_car_analog_control_orig(param_1, param_2, param_3, param_4, param_5, param_6);
 
 	if(override_steering){
-		param_3[1] = (unsigned char)*param_2;
+		param_3[0] = param_3[0] | 1;
+		param_3[1] = param_3[1] | 2;
 		*steering = steering_override;
+	}
+
+	if(override_accel){
+		//param_3[0] = param_3[0] & 0x9f | 2 | (unsigned char)param_2[1];
+		param_3[0] = param_3[0] | 2;
+		param_3[1] = param_3[1] | 2;
+		// wtf is this curve for the throttle
+		short base = 4096 * 0.8;
+		short offset_throttle = 4096 - base;
+		*throttle = base + accel_override * offset_throttle / 127;
+		LOG_VERBOSE("applying accel override, val is %d\n", accel_override);
+	}
+
+	if(override_brake){
+		param_3[0] = param_3[0] | 4;
+		param_3[1] = param_3[1] | 2;
+		*brake = brake_override * 0x1000 / 127;
+		LOG_VERBOSE("applying brake override, val is %d\n", brake_override);
 	}
 }
 
@@ -495,8 +518,8 @@ int main_thread(SceSize args, void *argp){
 		log_modules();
 	}
 
-	HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);
-	HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
+	//HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);
+	//HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
 	HIJACK_FUNCTION(offset_populate_car_analog_control, populate_car_analog_control_patched, populate_car_analog_control_orig);
 
 	u32 sceCtrlReadBufferPositive_addr = (u32)sceCtrlReadBufferPositive;

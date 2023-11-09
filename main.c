@@ -95,8 +95,8 @@ if(logfd > 0){ \
 
 #define GET_JUMP_TARGET(x) (0x80000000 | (((x) & 0x03FFFFFF) << 2))
 
-// TODO offsets for more versions
 u32 offset_digital_to_analog = 0;
+u32 offset_populate_car_digital_control = 0;
 
 #define HIJACK_FUNCTION(a, f, ptr) \
 { \
@@ -400,6 +400,7 @@ int set_offsets(char *disc_id){
 	LOG("game_base_addr: 0x%lx\n", game_base_addr);
 	if(strcmp("UCES01245", disc_id) == 0){
 		offset_digital_to_analog = game_base_addr + 0x14eb40;
+		offset_populate_car_digital_control = game_base_addr + 0x126b50;
 		return 0;
 	}
 
@@ -423,6 +424,23 @@ void digital_to_analog_patched(u32 *param_1, u32 *param_2){
 
 	if(*brake_as_int != 0 && override_brake){
 		*brake = brake_override;
+	}
+}
+
+static void (*populate_car_digital_control_orig)(unsigned char *param_1, u32 param_2, u32 param_3);
+void populate_car_digital_control_patched(unsigned char *param_1, u32 param_2, u32 param_3){
+	unsigned short int *accel_control = (unsigned short int *)&param_1[8];
+	unsigned short int *brake_control = (unsigned short int *)&param_1[10];
+
+	populate_car_digital_control_orig(param_1, param_2, param_3);
+
+	if(override_accel){
+		*accel_control = 1;
+		param_1[0] &= 0x9d;
+	}
+	if(override_brake){
+		*brake_control = 1;
+		param_1[0] &= 0xfb;
 	}
 }
 
@@ -452,6 +470,7 @@ int main_thread(SceSize args, void *argp){
 	}
 
 	HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);
+	HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
 
 	u32 sceCtrlReadBufferPositive_addr = (u32)sceCtrlReadBufferPositive;
 

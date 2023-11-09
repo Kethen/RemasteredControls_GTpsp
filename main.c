@@ -305,7 +305,7 @@ static int apply_deadzone(int val){
 	if(val > outer_deadzone){
 		val = outer_deadzone;
 	}
-	return val * 127 / (outer_deadzone - inner_deadzone);
+	return val * 127 / outer_deadzone;
 }
 
 static void sample_input(SceCtrlData *pad_data, int count, int negative){
@@ -357,6 +357,9 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 			if(val != 0){
 				override_brake = 1;
 				brake_override = (float)val / 127.0f;
+				if(brake_override > 1.0){
+					brake_override = 1.0;
+				}
 			}
 		}
 		// up
@@ -369,6 +372,9 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 			if(val != 0){
 				override_accel = 1;
 				accel_override = (float)val / 127.0f;
+				if(accel_override > 1.0){
+					accel_override = 1.0;
+				}
 			}
 		}
 

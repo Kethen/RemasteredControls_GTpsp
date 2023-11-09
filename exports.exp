@@ -1,0 +1,15 @@
+PSP_BEGIN_EXPORTS
+
+PSP_EXPORT_START(syslib, 0, 0x8000)
+PSP_EXPORT_FUNC(module_start)
+PSP_EXPORT_VAR(module_info)
+PSP_EXPORT_END
+
+PSP_EXPORT_START(GTRemasteredLib, 0, 0x4001)
+PSP_EXPORT_FUNC(sceCtrlReadBufferPositivePatched)
+PSP_EXPORT_FUNC(digital_to_analog_patched)
+PSP_EXPORT_FUNC(populate_car_digital_control_patched)
+PSP_EXPORT_FUNC(populate_car_analog_control_patched)
+PSP_EXPORT_END
+
+PSP_END_EXPORTS

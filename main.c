@@ -49,9 +49,13 @@ static int override_brake = 0;
 static int brake_override = 0;
 static int override_steering = 0;
 static short int steering_override = 0;
+static int override_camera = 0;
+static float camera_override = 0;
 
 static unsigned char outer_deadzone = 100;
 static unsigned char inner_deadzone = 10;
+
+static int camera_controls = 0;
 
 static u32 MakeSyscallStub(void *function) {
   SceUID block_id = sceKernelAllocPartitionMemory(PSP_MEMORY_PARTITION_USER, "", PSP_SMEM_High, 2 * sizeof(u32), NULL);
@@ -331,57 +335,80 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 
 	int i;
 	for(i = 0;i < count; i++){
+		int rx = pad_data[i].Rsrv[0];
 		int ry = pad_data[i].Rsrv[1];
 		int lx = pad_data[i].Lx;
+		//int ly = pad_data[i].Ly;
 		#if VERBOSE
 		u32 timestamp = pad_data->TimeStamp;
 		#endif // VERBOSE
 
+		// right, left, down, up
+
+		int lxp = 0;
+		int lxn = 0;
+		//int lyp = 0;
+		//int lyn = 0;
+		int rxp = 0;
+		int rxn = 0;
+		int ryp = 0;
+		int ryn = 0;
+
+		if(lx < 128){
+			lxn = apply_deadzone(128 - lx);
+		}
+		if(lx > 128){
+			lxp = apply_deadzone(lx - 128);
+		}
+		/*
+		if(ly < 128){
+			lyn = apply_deadzone(128 - ly);
+		}
+		if(ly > 128){
+			lyp = apply_deadzone(ly - 128);
+		}
+		*/
+		if(rx < 128){
+			rxn = apply_deadzone(128 - rx);
+		}
+		if(rx > 128){
+			rxp = apply_deadzone(rx - 128);
+		}
+		if(ry < 128){
+			ryn = apply_deadzone(128 - ry);
+		}
+		if(ry > 128){
+			ryp = apply_deadzone(ry - 128);
+		}
+
 		override_brake = 0;
 		override_accel = 0;
 		override_steering = 0;
+		override_camera = 0;
 
-		// right
-		if(lx > 128){
-			int val = lx - 128;
-			val = apply_deadzone(val);
-			if(val != 0){
-				override_steering = 1;
-				steering_override = (0x2000 * val / 127) * -1;
-			}
-		}
-		// left
-		if(lx < 128){
-			int val = 128 - lx;
-			if(val == 128){
-				val = 127;
-			}
-			val = apply_deadzone(val);
-			if(val != 0){
-				override_steering = 1;
-				steering_override = (0x2000 * val / 127);
-			}
+		if(lxp > 0){
+			override_steering = 1;
+			steering_override = (0x2000 * lxp / 127) * -1;
+		}else if(lxn > 0){
+			override_steering = 1;
+			steering_override = (0x2000 * lxn / 127);
 		}
 
-		// down
-		if(ry > 128){
-			int val = ry - 128;
-			val = apply_deadzone(val);
-			if(val != 0){
-				override_brake = 1;
-				brake_override = val;
-			}
+		if(ryp > 0){
+			override_brake = 1;
+			brake_override = ryp;
+		}else if(ryn > 0){
+			override_accel = 1;
+			accel_override = ryn;
 		}
-		// up
-		if(ry < 128){
-			int val = 128 - ry;
-			if(val == 128){
-				val = 127;
-			}
-			val = apply_deadzone(val);
-			if(val != 0){
-				override_accel = 1;
-				accel_override = val;
+
+		if(camera_controls){
+			if(rxn > 0){
+				override_camera = 1;
+				camera_override = (float)(rxn * -1.5) / 127.0f;
+			}else if(rxp > 0){
+				override_camera = 1;
+				camera_override = (float)(rxp * 1.5) / 127.0f;
 			}
 		}
 
@@ -488,7 +515,7 @@ void populate_car_digital_control_patched(unsigned char *param_1, u32 param_2, u
 static void (*populate_car_analog_control_orig)(u32 param_1, int *param_2, unsigned char *param_3, u32 param_4, u32 param_5, unsigned char param_6);
 void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned char *param_3, u32 param_4, u32 param_5, unsigned char param_6){
 	short *steering = (short *)(&param_3[4]); // +- 0x2000 int
-	//float *camera_rotation = (float *)(&param_3[0x2c]); // +- 32767.0 float
+	float *camera_rotation = (float *)(&param_3[0x2c]); // +-1.0 float
 	short *throttle = (short *)(&param_3[0x8]);
 	short *brake = (short *)(&param_3[0xA]);
 
@@ -517,6 +544,10 @@ void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned cha
 		*brake = brake_override * 0x1000 / 127;
 		LOG_VERBOSE("applying brake override, val is %d\n", brake_override);
 	}
+
+	if(override_camera){
+		*camera_rotation = camera_override;
+	}
 }
 
 int main_thread(SceSize args, void *argp){
@@ -543,6 +574,16 @@ int main_thread(SceSize args, void *argp){
 	if(is_emulator){
 		log_modules();
 	}
+
+	int fd = sceIoOpen("ms0:/PSP/"MODULE_NAME"_camera_controls.txt", PSP_O_RDONLY, 0);
+	if(fd > 0){
+		camera_controls = 1;
+		LOG("enabling camera controls, note that ppsspp right analog axes leak sometimes\n");
+		sceIoClose(fd);
+	}else{
+		LOG("not enabling camera controls\n");
+	}
+
 
 	//HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);
 	//HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);

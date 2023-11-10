@@ -339,8 +339,8 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 		int rx = pad_data[i].Rsrv[0];
 		int ry = pad_data[i].Rsrv[1];
 		int lx = pad_data[i].Lx;
-		//int ly = pad_data[i].Ly;
 		#if VERBOSE
+		int ly = pad_data[i].Ly;
 		u32 timestamp = pad_data->TimeStamp;
 		#endif // VERBOSE
 
@@ -425,7 +425,7 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 			}
 		}
 
-		LOG_VERBOSE("timestamp: %ld rx: %d ry: %d\n", timestamp, rx, ry);
+		LOG_VERBOSE("timestamp: %lu lx: %d ly: %d rx: %d ry: %d\n", timestamp, lx, ly, rx, ry);
 	}
 }
 

@@ -56,6 +56,7 @@ static unsigned char outer_deadzone = 100;
 static unsigned char inner_deadzone = 10;
 
 static int camera_controls = 0;
+static int adjacent_axes = 0;
 
 static u32 MakeSyscallStub(void *function) {
   SceUID block_id = sceKernelAllocPartitionMemory(PSP_MEMORY_PARTITION_USER, "", PSP_SMEM_High, 2 * sizeof(u32), NULL);
@@ -381,6 +382,12 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 			ryp = apply_deadzone(ry - 128);
 		}
 
+		if(adjacent_axes){
+			int tmp = ryn;
+			ryn = rxn;
+			rxn = tmp;
+		}
+
 		override_brake = 0;
 		override_accel = 0;
 		override_steering = 0;
@@ -389,7 +396,9 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 		if(lxp > 0){
 			override_steering = 1;
 			steering_override = (0x2000 * lxp / 127) * -1;
-		}else if(lxn > 0){
+		}
+
+		if(lxn > 0){
 			override_steering = 1;
 			steering_override = (0x2000 * lxn / 127);
 		}
@@ -397,7 +406,9 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 		if(ryp > 0){
 			override_brake = 1;
 			brake_override = ryp;
-		}else if(ryn > 0){
+		}
+
+		if(ryn > 0){
 			override_accel = 1;
 			accel_override = ryn;
 		}
@@ -406,13 +417,15 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 			if(rxn > 0){
 				override_camera = 1;
 				camera_override = (float)(rxn * -1.5) / 127.0f;
-			}else if(rxp > 0){
+			}
+
+			if(rxp > 0){
 				override_camera = 1;
 				camera_override = (float)(rxp * 1.5) / 127.0f;
 			}
 		}
 
-		LOG_VERBOSE("timestamp: %d rx: %d ry: %d\n", timestamp, rx, ry);
+		LOG_VERBOSE("timestamp: %ld rx: %d ry: %d\n", timestamp, rx, ry);
 	}
 }
 
@@ -584,6 +597,14 @@ int main_thread(SceSize args, void *argp){
 		LOG("not enabling camera controls\n");
 	}
 
+	fd = sceIoOpen("ms0:/PSP/"MODULE_NAME"_adjacent_axes.txt", PSP_O_RDONLY, 0);
+	if(fd > 0){
+		adjacent_axes = 1;
+		LOG("enabling adjacent controls, rebinding throttle to left\n");
+		sceIoClose(fd);
+	}else{
+		LOG("not enabling adjacent controls\n");
+	}
 
 	//HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);
 	//HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);

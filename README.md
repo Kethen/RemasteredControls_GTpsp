@@ -16,6 +16,12 @@
 - JP v1.01 (UCJS10100 1.01)
 - ASIA v1.00 (UCAS40265 1.00)
 
+### Hooking references
+
+- https://github.com/TheOfficialFloW/RemasteredControls
+- https://github.com/albe/joysens
+- https://github.com/Freakler/ppsspp-GTARemastered
+
 ### TODO
 
 - finish real HW hooking when I have a psp again

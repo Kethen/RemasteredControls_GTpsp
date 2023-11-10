@@ -9,7 +9,12 @@
 - be sure to map right analog stick directions in ppsspp settings, note that it is possible to map analog triggers to them
 - the hooking code may or may not work with a vita, don't have one to test, refer to how one can load psp prx plugins over there
 
+### Compability
+- EU v2.00 (UCES01245 2.00)
+- US v2.00 (UCUS98632 2.00)
+- JP v1.01 (UCJS10100 1.01)
+- ASIA v1.00 (UCAS40265 1.00)
+
 ### TODO
 
-- verify support on other regions of the game instead of just EU
 - finish real HW hooking when I have a psp again

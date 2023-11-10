@@ -186,9 +186,13 @@ u32 offset_populate_car_analog_control = 0;
   } \
 }
 
-static int get_disc_id(char *out_buf){
+static int get_disc_id_version(char *id_out, char *version_out){
 	char *sfo_path = "disc0:/PSP_GAME/PARAM.SFO";
 	int fd = sceIoOpen(sfo_path, PSP_O_RDONLY,0);
+
+	int id_found = 0;
+	int version_found = 0;
+
 	if(fd <= 0){
 		LOG("cannot open %s for reading\n", sfo_path);
 		return -1;
@@ -288,13 +292,22 @@ static int get_disc_id(char *out_buf){
 		}
 
 		if(strncmp("DISC_ID", keybuf, 8) == 0){
-			strcpy(out_buf, databuf);
+			strcpy(id_out, databuf);
+			id_found = 1;
+		}
+
+		if(strncmp("DISC_VERSION", keybuf, 8) == 0){
+			strcpy(version_out, databuf);
+			version_found = 1;
+		}
+
+		if(version_found && id_found){
 			break;
 		}
 	}
 
 	sceIoClose(fd);
-	return 0;
+	return version_found && id_found ? 0 : -1;
 }
 
 static int apply_deadzone(int val){
@@ -403,16 +416,29 @@ static void log_modules(){
 	}
 }
 
-int set_offsets(char *disc_id){
+int set_offsets(char *disc_id, char *disc_version){
 	LOG("game_base_addr: 0x%lx\n", game_base_addr);
-	if(strcmp("UCES01245", disc_id) == 0){
+	// EU and US v2.00
+	if(strcmp("2.00", disc_version) == 0 && (strcmp("UCES01245", disc_id) == 0 || strcmp("UCUS98632", disc_id) == 0)){
 		offset_digital_to_analog = game_base_addr + 0x14eb40;
 		offset_populate_car_digital_control = game_base_addr + 0x126b50;
 		offset_populate_car_analog_control = game_base_addr + 0x126dec;
 		return 0;
 	}
 
-	LOG("unknown dics id %s\n", disc_id);
+	// ASIA v1.00
+	if(strcmp("1.00", disc_version) == 0 && strcmp("UCAS40265", disc_id) == 0){
+		offset_populate_car_analog_control = game_base_addr + 0x126dec;
+		return 0;
+	}
+
+	// JP v1.01
+	if(strcmp("1.01", disc_version) == 0 && strcmp("UCJS10100", disc_id) == 0){
+		offset_populate_car_analog_control = game_base_addr + 0x126dd0;
+		return 0;
+	}
+
+	LOG("unknown dics id %s with version %s\n", disc_id, disc_version);
 	return -1;
 }
 
@@ -497,20 +523,20 @@ int main_thread(SceSize args, void *argp){
 	LOG("main thread begins\n");
 
 	sceKernelDelayThread(1000 * 1000 * 5);
-	LOG("forcing analog sampling mode");
-	sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
 
 	char disc_id[50];
-	int disc_id_valid = get_disc_id(disc_id) == 0;
+	char disc_version[50];
+	int disc_id_valid = get_disc_id_version(disc_id, disc_version) == 0;
 	if(disc_id_valid){
 		LOG("disc id is %s\n", disc_id);
+		LOG("disc version is %s\n", disc_version);
 	}else{
 		LOG("cannot find disc id from sfo, aborting\n");
 		return -1;
 	}
 
-	if(set_offsets(disc_id) != 0){
-		LOG("cannot lookup function offsets with disc id, aborting\n");
+	if(set_offsets(disc_id, disc_version) != 0){
+		LOG("cannot lookup function offsets with disc id and version, aborting\n");
 		return -1;
 	}
 

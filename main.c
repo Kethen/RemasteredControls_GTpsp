@@ -592,15 +592,15 @@ int main_thread(SceSize args, void *argp){
 		adjacent_axes = 1;
 		outer_deadzone = 117;
 		inner_deadzone = 5;
-	}
 
-	int fd = sceIoOpen("ms0:/PSP/"MODULE_NAME"_camera_controls.txt", PSP_O_RDONLY, 0);
-	if(fd > 0){
-		camera_controls = 1;
-		LOG("enabling camera controls\n");
-		sceIoClose(fd);
-	}else{
-		LOG("not enabling camera controls\n");
+		int fd = sceIoOpen("ms0:/PSP/"MODULE_NAME"_camera_controls.txt", PSP_O_RDONLY, 0);
+		if(fd > 0){
+			camera_controls = 1;
+			LOG("enabling camera controls\n");
+			sceIoClose(fd);
+		}else{
+			LOG("not enabling camera controls\n");
+		}
 	}
 
 	//HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);

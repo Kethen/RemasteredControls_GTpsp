@@ -12,9 +12,9 @@
 
 - on ppsspp, throttle is bound to right stick left, brake is bound to right stick down, remap right stick left and down in ppsspp accordingly to your desired throttle and brake control
 	- a patched windows ppsspp is provided at the moment to remove hardcoded xinput trigger deadzones, https://github.com/hrydgard/ppsspp/issues/18404
+- camera rotation on bumper and cockpit view can additionally be enabled on ppsspp by creating `ms0:/PSP/GTRemastered_camera_controls.txt`
+	- binds to left stick up and down when enabled, remap ppsspp left stick up and down to your desired camera control buttons accordingly
 - on vita (when supported), throttle is bound to right stick up, brake is bound to right stick down
-- camera rotation can additionally be enabled by creating `ms0:/PSP/GTRemastered_camera_controls.txt`, binds to right analog left and right
-	- when enabled on ppsspp, it will rebind throttle to right stick up and brake to down
 
 
 ### Compability

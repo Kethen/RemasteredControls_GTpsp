@@ -339,8 +339,8 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 		int rx = pad_data[i].Rsrv[0];
 		int ry = pad_data[i].Rsrv[1];
 		int lx = pad_data[i].Lx;
-		#if VERBOSE
 		int ly = pad_data[i].Ly;
+		#if VERBOSE
 		u32 timestamp = pad_data->TimeStamp;
 		#endif // VERBOSE
 
@@ -348,9 +348,9 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 
 		int lxp = 0;
 		int lxn = 0;
-		//int lyp = 0;
-		//int lyn = 0;
-		int rxp = 0;
+		int lyp = 0;
+		int lyn = 0;
+		//int rxp = 0;
 		int rxn = 0;
 		int ryp = 0;
 		int ryn = 0;
@@ -361,20 +361,20 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 		if(lx > 128){
 			lxp = apply_deadzone(lx - 128);
 		}
-		/*
 		if(ly < 128){
 			lyn = apply_deadzone(128 - ly);
 		}
 		if(ly > 128){
 			lyp = apply_deadzone(ly - 128);
 		}
-		*/
 		if(rx < 128){
 			rxn = apply_deadzone(128 - rx);
 		}
+		/*
 		if(rx > 128){
 			rxp = apply_deadzone(rx - 128);
 		}
+		*/
 		if(ry < 128){
 			ryn = apply_deadzone(128 - ry);
 		}
@@ -414,14 +414,14 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 		}
 
 		if(camera_controls){
-			if(rxn > 0){
+			if(lyn > 0){
 				override_camera = 1;
-				camera_override = (float)(rxn * -1.5) / 127.0f;
+				camera_override = (float)(lyn * -1.5) / 127.0f;
 			}
 
-			if(rxp > 0){
+			if(lyp > 0){
 				override_camera = 1;
-				camera_override = (float)(rxp * 1.5) / 127.0f;
+				camera_override = (float)(lyp * 1.5) / 127.0f;
 			}
 		}
 
@@ -597,8 +597,7 @@ int main_thread(SceSize args, void *argp){
 	int fd = sceIoOpen("ms0:/PSP/"MODULE_NAME"_camera_controls.txt", PSP_O_RDONLY, 0);
 	if(fd > 0){
 		camera_controls = 1;
-		adjacent_axes = 0;
-		LOG("enabling camera controls, note that ppsspp right analog axes leak sometimes\n");
+		LOG("enabling camera controls\n");
 		sceIoClose(fd);
 	}else{
 		LOG("not enabling camera controls\n");

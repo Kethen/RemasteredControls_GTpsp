@@ -53,7 +53,7 @@ static int override_camera = 0;
 static float camera_override = 0;
 
 static unsigned char outer_deadzone = 100;
-static unsigned char inner_deadzone = 10;
+static unsigned char inner_deadzone = 25;
 
 static int camera_controls = 0;
 static int adjacent_axes = 0;
@@ -545,7 +545,7 @@ void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned cha
 		param_3[0] = param_3[0] | 2;
 		param_3[1] = param_3[1] | 2;
 		// wtf is this curve for the throttle
-		short base = 4096 * 0.8;
+		short base = 4096 * 0.77;
 		short offset_throttle = 4096 - base;
 		*throttle = base + accel_override * offset_throttle / 127;
 		LOG_VERBOSE("applying accel override, val is %d\n", accel_override);
@@ -588,22 +588,20 @@ int main_thread(SceSize args, void *argp){
 		log_modules();
 	}
 
+	if(is_emulator){
+		adjacent_axes = 1;
+		outer_deadzone = 117;
+		inner_deadzone = 5;
+	}
+
 	int fd = sceIoOpen("ms0:/PSP/"MODULE_NAME"_camera_controls.txt", PSP_O_RDONLY, 0);
 	if(fd > 0){
 		camera_controls = 1;
+		adjacent_axes = 0;
 		LOG("enabling camera controls, note that ppsspp right analog axes leak sometimes\n");
 		sceIoClose(fd);
 	}else{
 		LOG("not enabling camera controls\n");
-	}
-
-	fd = sceIoOpen("ms0:/PSP/"MODULE_NAME"_adjacent_axes.txt", PSP_O_RDONLY, 0);
-	if(fd > 0){
-		adjacent_axes = 1;
-		LOG("enabling adjacent controls, rebinding throttle to left\n");
-		sceIoClose(fd);
-	}else{
-		LOG("not enabling adjacent controls\n");
 	}
 
 	//HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);

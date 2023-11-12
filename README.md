@@ -1,7 +1,7 @@
 ### Remastered Controls for GTpsp
 
 - override internal steering deadzone for fine steering
-- inject vector throttle and brake values for a better RWD experience, mapped to right analog stick up and down
+- inject vector throttle and brake values for a better RWD experience
 
 ### Usage
 

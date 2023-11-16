@@ -340,99 +340,98 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 
 	LOG_VERBOSE("processing %d buffers in %s mode\n", count, negative? "negative" : "positive");
 
-	int i;
-	for(i = 0;i < count; i++){
-		int rx = pad_data[i].Rsrv[0];
-		int ry = pad_data[i].Rsrv[1];
-		int lx = pad_data[i].Lx;
-		int ly = pad_data[i].Ly;
-		#if VERBOSE
-		u32 timestamp = pad_data->TimeStamp;
-		#endif // VERBOSE
+	// for this game, it probably makes sense to just process the last buffer
+	int rx = pad_data[count - 1].Rsrv[0];
+	int ry = pad_data[count - 1].Rsrv[1];
+	int lx = pad_data[count - 1].Lx;
+	int ly = pad_data[count - 1].Ly;
 
-		// right, left, down, up
+	#if VERBOSE
+	u32 timestamp = pad_data[count - 1].TimeStamp;
+	#endif // VERBOSE
 
-		int lxp = 0;
-		int lxn = 0;
-		int lyp = 0;
-		int lyn = 0;
-		//int rxp = 0;
-		int rxn = 0;
-		int ryp = 0;
-		int ryn = 0;
+	// right, left, down, up
 
-		if(lx < 128){
-			lxn = apply_deadzone(128 - lx);
-		}
-		if(lx > 128){
-			lxp = apply_deadzone(lx - 128);
-		}
-		if(ly < 128){
-			lyn = apply_deadzone(128 - ly);
-		}
-		if(ly > 128){
-			lyp = apply_deadzone(ly - 128);
-		}
-		if(rx < 128){
-			rxn = apply_deadzone(128 - rx);
-		}
-		/*
-		if(rx > 128){
-			rxp = apply_deadzone(rx - 128);
-		}
-		*/
-		if(ry < 128){
-			ryn = apply_deadzone(128 - ry);
-		}
-		if(ry > 128){
-			ryp = apply_deadzone(ry - 128);
-		}
+	int lxp = 0;
+	int lxn = 0;
+	int lyp = 0;
+	int lyn = 0;
+	//int rxp = 0;
+	int rxn = 0;
+	int ryp = 0;
+	int ryn = 0;
 
-		if(adjacent_axes){
-			int tmp = ryn;
-			ryn = rxn;
-			rxn = tmp;
-		}
-
-		override_brake = 0;
-		override_accel = 0;
-		override_steering = 0;
-		override_camera = 0;
-
-		if(lxp > 0){
-			override_steering = 1;
-			steering_override = (0x2000 * lxp / 127) * -1;
-		}
-
-		if(lxn > 0){
-			override_steering = 1;
-			steering_override = (0x2000 * lxn / 127);
-		}
-
-		if(ryp > 0){
-			override_brake = 1;
-			brake_override = ryp;
-		}
-
-		if(ryn > 0){
-			override_accel = 1;
-			accel_override = ryn;
-		}
-
-		if(camera_controls){
-			if(lyn > 0){
-				override_camera = 1;
-				camera_override = (float)(lyn * -1.5) / 127.0f;
-			}
-
-			if(lyp > 0){
-				override_camera = 1;
-				camera_override = (float)(lyp * 1.5) / 127.0f;
-			}
-		}
-
-		LOG_VERBOSE("timestamp: %lu lx: %d ly: %d rx: %d ry: %d\n", timestamp, lx, ly, rx, ry);
+	if(lx < 128){
+		lxn = apply_deadzone(128 - lx);
 	}
+	if(lx > 128){
+		lxp = apply_deadzone(lx - 128);
+	}
+	if(ly < 128){
+		lyn = apply_deadzone(128 - ly);
+	}
+	if(ly > 128){
+		lyp = apply_deadzone(ly - 128);
+	}
+	if(rx < 128){
+		rxn = apply_deadzone(128 - rx);
+	}
+	/*
+	if(rx > 128){
+		rxp = apply_deadzone(rx - 128);
+	}
+	*/
+	if(ry < 128){
+		ryn = apply_deadzone(128 - ry);
+	}
+	if(ry > 128){
+		ryp = apply_deadzone(ry - 128);
+	}
+
+	if(adjacent_axes){
+		int tmp = ryn;
+		ryn = rxn;
+		rxn = tmp;
+	}
+
+	override_brake = 0;
+	override_accel = 0;
+	override_steering = 0;
+	override_camera = 0;
+
+	if(lxp > 0){
+		override_steering = 1;
+		steering_override = (0x2000 * lxp / 127) * -1;
+	}
+
+	if(lxn > 0){
+		override_steering = 1;
+		steering_override = (0x2000 * lxn / 127);
+	}
+
+	if(ryp > 0){
+		override_brake = 1;
+		brake_override = ryp;
+	}
+
+	if(ryn > 0){
+		override_accel = 1;
+		accel_override = ryn;
+	}
+
+	if(camera_controls){
+		if(lyn > 0){
+			override_camera = 1;
+			camera_override = (float)(lyn * -1.5) / 127.0f;
+		}
+
+		if(lyp > 0){
+			override_camera = 1;
+			camera_override = (float)(lyp * 1.5) / 127.0f;
+		}
+	}
+
+	LOG_VERBOSE("timestamp: %lu lx: %d ly: %d rx: %d ry: %d\n", timestamp, lx, ly, rx, ry);
 }
 
 static int (*sceCtrlReadBufferPositiveOrig)(SceCtrlData *pad_data, int count);
@@ -542,9 +541,9 @@ void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned cha
 
 	if(is_emulator){
 		// attempt to fix save state on ppsspp, but might sample more future input than the game did on the frame this was called...
-		SceCtrlData pad_data[10];
-		int res = sceCtrlPeekBufferPositive(pad_data, 10);
-		sample_input(pad_data, res, 0);
+		SceCtrlData pad_data;
+		int res = sceCtrlPeekBufferPositive(&pad_data, 1);
+		sample_input(&pad_data, res, 0);
 	}
 
 	if(override_steering){

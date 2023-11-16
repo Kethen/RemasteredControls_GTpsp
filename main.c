@@ -122,6 +122,12 @@ u32 offset_populate_car_analog_control = 0;
   ptr = (void *)patch_buffer; \
 }
 
+// XXX ppsspp loading savestate reloads module imports and overwrites this kind of hooking in case HLE
+// syscall changed
+// https://github.com/hrydgard/ppsspp/blob/master/Core/HLE/sceKernelModule.cpp
+// if this kind of hooking on ppsspp cannot be avoided, repatch in a slow thread loop maybe, at least peek
+// can be used instead for this particular plugin
+
 // jacking JR_SYSCALL in ppsspp, so just save the two instructions, instead of seeking the target
 // also scan other modules for the same pattern and patch them if ppsspp
 // for real hw, go the jump target then attempt the more standard two instructions hijack
@@ -534,6 +540,13 @@ void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned cha
 
 	populate_car_analog_control_orig(param_1, param_2, param_3, param_4, param_5, param_6);
 
+	if(is_emulator){
+		// attempt to fix save state on ppsspp, but might sample more future input than the game did on the frame this was called...
+		SceCtrlData pad_data[10];
+		int res = sceCtrlPeekBufferPositive(pad_data, 10);
+		sample_input(pad_data, res, 0);
+	}
+
 	if(override_steering){
 		param_3[0] = param_3[0] | 1;
 		param_3[1] = param_3[1] | 2;
@@ -566,7 +579,9 @@ void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned cha
 int main_thread(SceSize args, void *argp){
 	LOG("main thread begins\n");
 
-	sceKernelDelayThread(1000 * 1000 * 5);
+	if(!is_emulator){
+		sceKernelDelayThread(1000 * 1000 * 5);
+	}
 
 	char disc_id[50];
 	char disc_version[50];
@@ -614,10 +629,18 @@ int main_thread(SceSize args, void *argp){
 		return 1;
 	}
 
-	HIJACK_SYSCALL_STUB(sceCtrlReadBufferPositive_addr, sceCtrlReadBufferPositivePatched, sceCtrlReadBufferPositiveOrig);
+	if(!is_emulator){
+		HIJACK_SYSCALL_STUB(sceCtrlReadBufferPositive_addr, sceCtrlReadBufferPositivePatched, sceCtrlReadBufferPositiveOrig);
+	}
 
 	sceKernelDcacheWritebackAll();
 	sceKernelIcacheClearAll();
+
+	if(is_emulator){
+		sceKernelDelayThread(1000 * 1000 * 5);
+		LOG("boosting input sampling on ppsspp\n");
+		sceCtrlSetSamplingCycle(5555);
+	}
 
 	LOG("main thread finishes\n");
 	return 0;
@@ -629,14 +652,22 @@ void init(){
 	#endif
 
 	LOG("module started\n");
-	SceUID thid = sceKernelCreateThread("ra2d", main_thread, 0x18, 4*1024, 0, NULL);
-	if(thid < 0){
-		LOG("failed creating main thread\n")
-		return;
+	if(!is_emulator){
+		SceUID thid = sceKernelCreateThread(MODULE_NAME, main_thread, 0x18, 4*1024, 0, NULL);
+		if(thid < 0){
+			LOG("failed creating main thread\n")
+			return;
+		}
+		LOG("created thread with thid 0x%x\n", thid);
+		sceKernelStartThread(thid, 0, NULL);
+		LOG("main thread started\n");
+	}else{
+		// function hijacking has to be done on the module's assigned thread, or it'll break
+		// savestate loading, crashing the whole emulator
+		// this happens probably because patching on another ppsspp thread does not flush cache properly,
+		// when dynarec is also in the equation
+		main_thread(0, NULL);
 	}
-	LOG("created thread with thid 0x%x\n", thid);
-	sceKernelStartThread(thid, 0, NULL);
-	LOG("main thread started\n");
 }
 
 int StartPSP(SceModule2 *mod) {

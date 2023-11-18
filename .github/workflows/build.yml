@@ -33,5 +33,7 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: GTRemastered_${{ env.sha_name }}
-        path: GTRemastered.prx
+        path: |
+           GTRemastered.prx
+           plugin.ini
         if-no-files-found: error

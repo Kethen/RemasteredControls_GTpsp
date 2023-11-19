@@ -204,7 +204,7 @@ static int get_disc_id_version(char *id_out, char *version_out){
 	int id_found = 0;
 	int version_found = 0;
 
-	if(fd <= 0){
+	if(fd < 0){
 		LOG("cannot open %s for reading\n", sfo_path);
 		return -1;
 	}
@@ -608,7 +608,7 @@ int main_thread(SceSize args, void *argp){
 		inner_deadzone = 5;
 
 		int fd = sceIoOpen("ms0:/PSP/"MODULE_NAME"_camera_controls.txt", PSP_O_RDONLY, 0);
-		if(fd > 0){
+		if(fd >= 0){
 			camera_controls = 1;
 			LOG("enabling camera controls\n");
 			sceIoClose(fd);

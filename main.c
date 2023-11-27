@@ -604,8 +604,8 @@ int main_thread(SceSize args, void *argp){
 
 	if(is_emulator){
 		adjacent_axes = 1;
-		outer_deadzone = 117;
-		inner_deadzone = 5;
+		outer_deadzone = 124;
+		inner_deadzone = 3;
 
 		int fd = sceIoOpen("ms0:/PSP/"MODULE_NAME"_camera_controls.txt", PSP_O_RDONLY, 0);
 		if(fd >= 0){

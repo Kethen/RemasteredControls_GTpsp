@@ -71,7 +71,7 @@ static u32 MakeSyscallStub(void *function) {
 #if DEBUG
 static int logfd;
 #define LOG(...) \
-if(logfd > 0){ \
+if(logfd >= 0){ \
 	char logbuf[128]; \
 	int loglen = sprintf(logbuf, __VA_ARGS__); \
 	if(loglen > 0){ \
@@ -648,6 +648,9 @@ int main_thread(SceSize args, void *argp){
 void init(){
 	#if DEBUG
 	logfd = sceIoOpen("ms0:/PSP/"MODULE_NAME".log", PSP_O_WRONLY|PSP_O_CREAT|PSP_O_TRUNC, 0777);
+	if(logfd < 0){
+		logfd = sceIoOpen("ef0:/PSP/"MODULE_NAME".log", PSP_O_WRONLY|PSP_O_CREAT|PSP_O_TRUNC, 0777);
+	}
 	#endif
 
 	LOG("module started\n");

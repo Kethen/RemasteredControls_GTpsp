@@ -142,9 +142,8 @@ u32 offset_populate_car_analog_control = 0;
   _sw(_lw(_func_ + 4), (u32)pattern + 4); \
   u32 ff = (u32)f; \
   if(!is_emulator){ \
-    ff = MakeSyscallStub(f); \
-    _func_ = GET_JUMP_TARGET(_lw(a)); \
-    LOG("real hardware mode, making syscall stub 0x%lx and retargetting function 0x%lx\n", ff, _func_); \
+    _func_ = GET_JUMP_TARGET(_lw(_func_)); \
+    LOG("real hardware mode, retargetting function 0x%lx\n", _func_); \
     LOG("original instructions: 0x%lx 0x%lx\n", _lw(_func_), _lw(_func_ + 4)); \
   } \
   static u32 patch_buffer[3]; \

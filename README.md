@@ -29,6 +29,12 @@
 - https://github.com/albe/joysens
 - https://github.com/Freakler/ppsspp-GTARemastered
 
+### Credits
+
+- https://github.com/kotcrab/ghidra-allegrex for making psp games modding easier
+- https://github.com/pspdev , m33 and pro cfw for psp homebrew development tools
+- https://github.com/hrydgard/ppsspp for an awesome hle psp
+
 ### TODO
 
 - finish real HW hooking when I have a psp again

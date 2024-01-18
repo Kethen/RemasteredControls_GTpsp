@@ -11,7 +11,7 @@
 ### Keybinds
 
 - on ppsspp, throttle is bound to right stick left, brake is bound to right stick down, remap right stick left and down in ppsspp accordingly to your desired throttle and brake control
-	- on windows, please use the latest git build, or version 1.17/1.16.7 when released
+	- on windows, please use the latest git build, or version 1.17 and up when released
 - camera rotation on bumper and cockpit view can additionally be enabled on ppsspp by creating `ms0:/PSP/GTRemastered_camera_controls.txt`
 	- binds to left stick up and down when enabled, remap ppsspp left stick up and down to your desired camera control buttons accordingly
 - on vita (when supported), throttle is bound to right stick up, brake is bound to right stick down
@@ -34,6 +34,10 @@
 - https://github.com/kotcrab/ghidra-allegrex for making psp games modding easier
 - https://github.com/pspdev , m33 and pro cfw for psp homebrew development tools
 - https://github.com/hrydgard/ppsspp for an awesome hle psp
+
+### Extra game tweaking CWCheat codes
+
+- check the game_tweaks directory of this repository
 
 ### TODO
 

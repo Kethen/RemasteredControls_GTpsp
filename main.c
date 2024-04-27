@@ -529,12 +529,27 @@ void populate_car_digital_control_patched(unsigned char *param_1, u32 param_2, u
 	}
 }
 
+// this is naturally invoked when button bound for steering is not pressed, so likely invoked for converting analog stick value to steering
 static void (*populate_car_analog_control_orig)(u32 param_1, int *param_2, unsigned char *param_3, u32 param_4, u32 param_5, unsigned char param_6);
 void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned char *param_3, u32 param_4, u32 param_5, unsigned char param_6){
 	short *steering = (short *)(&param_3[4]); // +- 0x2000 int
 	float *camera_rotation = (float *)(&param_3[0x2c]); // +-1.0 float
 	short *throttle = (short *)(&param_3[0x8]);
 	short *brake = (short *)(&param_3[0xA]);
+	// an analog handbrake
+	//short *handbrake = (short *)(&param_3[0xe]);
+	//param_3[0] = param_3[0] | 0x10;
+	// analog reverse, also has the weird response curve
+	//short *reverse = (short *)(&param_3[0xc]);
+	//param_3[0] = param_3[0] | 8;
+
+	// no clutch..?
+
+	static uint8_t logged_location = 0;
+	if(!logged_location){
+		logged_location = 1;
+		LOG("car control struct is at 0x%lx\n", (uint32_t)param_3);
+	}
 
 	populate_car_analog_control_orig(param_1, param_2, param_3, param_4, param_5, param_6);
 
@@ -552,21 +567,44 @@ void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned cha
 	}
 
 	if(override_accel){
-		//param_3[0] = param_3[0] & 0x9f | 2 | (unsigned char)param_2[1];
+		// weird curve, 0-0.71 is roughly nothing, 0.81 is roughly 0.25 throttle, 0.91 is roughly 0.5 throttle, 0.96 is roughly 0.75 throttle
 		param_3[0] = param_3[0] | 2;
-		param_3[1] = param_3[1] | 2;
-		// wtf is this curve for the throttle
-		short base = 4096 * 0.77;
-		short offset_throttle = 4096 - base;
-		*throttle = base + accel_override * offset_throttle / 127;
-		LOG_VERBOSE("applying accel override, val is %d\n", accel_override);
+		if(accel_override >= 95){
+			static short base = 0x1000 * 0.96;
+			static short offset_throttle = 0x1000 * (1.0 - 0.96) + 1;
+			int throttle_segment = accel_override - 95;
+			static int range = 127 - 95;
+			*throttle = base + throttle_segment * offset_throttle / range;
+			if(*throttle > 4096){
+				*throttle = 4096;
+			}
+		}else if(accel_override >= 64){
+			static short base = 0x1000 * 0.91;
+			static short offset_throttle = 0x1000 * (0.96 - 0.91);
+			int throttle_segment = accel_override - 64;
+			static int range = 94 - 64;
+			*throttle = base + throttle_segment * offset_throttle / range;
+		}else if(accel_override >= 32){
+			static short base = 0x1000 * 0.81;
+			static short offset_throttle = 0x1000 * (0.91 - 0.81);
+			int throttle_segment = accel_override - 32;
+			static int range = 63 - 32;
+			*throttle = base + throttle_segment * offset_throttle / range;
+		}else{
+			static short base = 0x1000 * 0.71;
+			static short offset_throttle = 0x1000 * (0.81 - 0.71);
+			int throttle_segment = accel_override;
+			static int range = 31;
+			*throttle = base + throttle_segment * offset_throttle / range;
+		}
+		// *throttle = accel_override * 0x1000 / 127;
+		LOG_VERBOSE("applying accel override, val is %d, throttle is %d\n", accel_override, *throttle);
 	}
 
 	if(override_brake){
 		param_3[0] = param_3[0] | 4;
-		param_3[1] = param_3[1] | 2;
 		*brake = brake_override * 0x1000 / 127;
-		LOG_VERBOSE("applying brake override, val is %d\n", brake_override);
+		LOG_VERBOSE("applying brake override, val is %d, brake is %d\n", brake_override, *brake);
 	}
 
 	if(override_camera){

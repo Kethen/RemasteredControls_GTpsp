@@ -373,6 +373,11 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 	int ryp = 0;
 	int ryn = 0;
 
+	static int right_stick_looks_dead = 1;
+	if(right_stick_looks_dead && (rx != 0 || ry != 0)){
+		right_stick_looks_dead = 0;
+	}
+
 	if(lx < 128){
 		lxn = apply_deadzone(128 - lx);
 	}
@@ -421,14 +426,16 @@ static void sample_input(SceCtrlData *pad_data, int count, int negative){
 		steering_override = (0x2000 * lxn / 127);
 	}
 
-	if(ryp > 0){
-		override_brake = 1;
-		brake_override = ryp;
-	}
+	if(!right_stick_looks_dead){
+		if(ryp > 0){
+			override_brake = 1;
+			brake_override = ryp;
+		}
 
-	if(ryn > 0){
-		override_accel = 1;
-		accel_override = ryn;
+		if(ryn > 0){
+			override_accel = 1;
+			accel_override = ryn;
+		}
 	}
 
 	if(camera_controls){
@@ -564,12 +571,6 @@ void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned cha
 
 	int k1 = pspSdkSetK1(0);
 
-	if(is_emulator){
-		SceCtrlData pad_data;
-		int res = sceCtrlPeekBufferPositive(&pad_data, 1);
-		sample_input(&pad_data, res, 0);
-	}
-
 	int mode;
 	sceCtrlGetSamplingMode(&mode);
 	if(mode != PSP_CTRL_MODE_ANALOG){
@@ -577,6 +578,12 @@ void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned cha
 		LOG_VERBOSE("sceCtrlGetSamplingMode is not analog..? setting it to analog now");
 		sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);
 		return;
+	}
+
+	if(is_emulator){
+		SceCtrlData pad_data;
+		int res = sceCtrlPeekBufferPositive(&pad_data, 1);
+		sample_input(&pad_data, res, 0);
 	}
 
 	if(override_steering){

@@ -1,5 +1,7 @@
 IMAGE_NAME="pspsdk"
 
+set -xe
+
 if [ "$REBUILD_IMAGE" == "true" ] && podman image exists $IMAGE_NAME
 then
 	podman image rm -f $IMAGE_NAME
@@ -10,12 +12,11 @@ then
 	podman image build -f Dockerfile -t $IMAGE_NAME
 fi
 
+mkdir -p workdir
+
 podman run \
 	--rm -it \
-	--security-opt label=disable \
+	-v /dev/bus/usb:/dev/bus/usb \
 	-v ./:/workdir \
-	-v ./build_podman.sh:/workdir/build_podman.sh:ro \
-	-v ./script:/workdir/script:ro \
 	-w /workdir \
-	$IMAGE_NAME \
-	/workdir/script
+	$IMAGE_NAME

@@ -609,6 +609,8 @@ void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned cha
 		param_3[1] = param_3[1] | 2;
 		*steering = steering_override;
 		LOG_VERBOSE("applying steering override, val is %d, steering is %d", steering_override, *steering);
+	}else{
+		*steering = 0;
 	}
 
 	if(override_accel){

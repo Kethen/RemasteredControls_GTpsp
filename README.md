@@ -5,17 +5,17 @@
 
 ### Usage
 
-- load prx with game, see https://www.ppsspp.org/docs/reference/plugins/ for ppsspp
-- the hooking code may or may not work with a vita, don't have one to test, refer to how one can load psp prx plugins over there
+- load prx with game, see https://www.ppsspp.org/docs/reference/plugins/ for PPSSPP, see https://consolemods.org/wiki/Vita:Adrenaline#Adding_Plugins for PSVita and https://www.reddit.com/r/PSP/wiki/plugins/ for PSP
+- the hooking code may or may not work with a vita
 
 ### Keybinds
 
-- on ppsspp, throttle is bound to right stick left, brake is bound to right stick down, remap right stick left and down in ppsspp accordingly to your desired throttle and brake control
+- on PPSSPP, throttle is bound to right stick left, brake is bound to right stick down, remap right stick left and down in ppsspp accordingly to your desired throttle and brake control
 	- on windows, please use  version 1.17 and up
-- camera rotation on bumper and cockpit view can additionally be enabled on ppsspp by creating `ms0:/PSP/GTRemastered_camera_controls.txt`
-	- binds to left stick up and down when enabled, remap ppsspp left stick up and down to your desired camera control buttons accordingly
-- on vita (when supported), throttle is bound to right stick up, brake is bound to right stick down
-
+- camera rotation on bumper and cockpit view can additionally be enabled on PPSSPP by creating `ms0:/PSP/GTRemastered_camera_controls.txt`
+	- binds to left stick up and down when enabled, remap PPSSPP left stick up and down to your desired camera control inputs accordingly
+- on PSVita (when supported), throttle is bound to right stick up, brake is bound to right stick down
+- on PSP, it only reduces steering deadzones, there is no keybinding
 
 ### Compability
 - EU v2.00 (UCES01245 2.00)

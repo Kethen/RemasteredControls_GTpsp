@@ -121,8 +121,8 @@ u32 offset_populate_car_analog_control = 0;
 { \
 	LOG("hijacking function at 0x%lx with 0x%lx", (u32)a, (u32)f); \
 	u32 _func_ = (u32)a; \
-	LOG("original instructions: 0x%lx 0x%lx", _lw(_func_), _lw(_func_ + 4)); \
 	u32 ff = (u32)f; \
+	int _interrupts = pspSdkDisableInterrupts(); \
 	if(!is_emulator){ \
 		ff = MakeSyscallStub(f); \
 	} \
@@ -130,13 +130,13 @@ u32 offset_populate_car_analog_control = 0;
 	_sw(_lw(_func_), (u32)patch_buffer); \
 	_sw(_lw(_func_ + 4), (u32)patch_buffer + 8);\
 	MAKE_JUMP((u32)patch_buffer + 4, _func_ + 8); \
-	int _interrupts = pspSdkDisableInterrupts(); \
 	_sw(0x08000000 | (((u32)(ff) >> 2) & 0x03FFFFFF), _func_); \
 	_sw(0, _func_ + 4); \
 	ptr = (void *)patch_buffer; \
 	sceKernelDcacheWritebackAll(); \
 	sceKernelIcacheClearAll(); \
 	pspSdkEnableInterrupts(_interrupts); \
+	LOG("original instructions: 0x%lx 0x%lx", _lw((u32)patch_buffer), _lw((u32)patch_buffer + 8)); \
 }
 
 // XXX ppsspp loading savestate reloads module imports and overwrites this kind of hooking in case HLE
@@ -153,32 +153,33 @@ u32 offset_populate_car_analog_control = 0;
 { \
 	LOG("hijacking syscall stub at 0x%lx with 0x%lx", (u32)a, (u32)f); \
 	u32 _func_ = (u32)a; \
-	LOG("original instructions: 0x%lx 0x%lx", _lw(_func_), _lw(_func_ + 4)); \
+	u32 ff = (u32)f; \
+	int _interrupts = pspSdkDisableInterrupts(); \
+	if(!is_emulator){ \
+		_func_ = GET_JUMP_TARGET(_lw(_func_)); \
+	} \
 	u32 pattern[2]; \
 	_sw(_lw(_func_), (u32)pattern); \
 	_sw(_lw(_func_ + 4), (u32)pattern + 4); \
-	u32 ff = (u32)f; \
-	if(!is_emulator){ \
-		_func_ = GET_JUMP_TARGET(_lw(_func_)); \
-		LOG("real hardware mode, retargetting function 0x%lx", _func_); \
-		LOG("original instructions: 0x%lx 0x%lx", _lw(_func_), _lw(_func_ + 4)); \
-	} \
 	static u32 patch_buffer[3]; \
 	if(is_emulator){ \
-		_sw(_lw(_func_), (u32)patch_buffer); \
-		_sw(_lw(_func_ + 4), (u32)patch_buffer + 4); \
+		_sw(_lw((u32)pattern), (u32)patch_buffer); \
+		_sw(_lw((u32)pattern + 4), (u32)patch_buffer + 4); \
 	}else{ \
-		_sw(_lw(_func_), (u32)patch_buffer); \
-		_sw(_lw(_func_ + 4), (u32)patch_buffer + 8); \
+		_sw(_lw((u32)pattern), (u32)patch_buffer); \
+		_sw(_lw((u32)pattern + 4), (u32)patch_buffer + 8); \
 		MAKE_JUMP((u32)patch_buffer + 4, _func_ + 8); \
 	} \
-	int _interrupts = pspSdkDisableInterrupts(); \
 	_sw(0x08000000 | (((u32)(ff) >> 2) & 0x03FFFFFF), _func_); \
 	_sw(0, _func_ + 4); \
 	ptr = (void *)patch_buffer; \
 	sceKernelDcacheWritebackAll(); \
 	sceKernelIcacheClearAll(); \
 	pspSdkEnableInterrupts(_interrupts); \
+	if(!is_emulator){ \
+		LOG("real hardware mode, retargetting function 0x%lx", _func_); \
+	} \
+	LOG("original instructions: 0x%lx 0x%lx", _lw((u32)pattern), _lw((u32)pattern + 4)); \
 	if(is_emulator){ \
 		SceUID modules[32]; \
 		SceKernelModuleInfo info; \

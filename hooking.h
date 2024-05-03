@@ -1,6 +1,6 @@
 #ifndef _HOOKING_
 #define _HOOKING_
-#include <logging.h>
+#include "logging.h"
 
 #include <psputils.h>
 #include <pspsdk.h>

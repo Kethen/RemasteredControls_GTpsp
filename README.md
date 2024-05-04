@@ -14,7 +14,7 @@
 	- on windows, please use  version 1.17 and up
 - camera rotation on bumper and cockpit view can additionally be enabled on PPSSPP by creating `ms0:/PSP/GTRemastered_camera_controls.txt`
 	- binds to left stick up and down when enabled, remap PPSSPP left stick up and down to your desired camera control inputs accordingly
-- on PSVita (when supported), throttle is bound to right stick up, brake is bound to right stick down
+- on PSVita, throttle is bound to right stick up, brake is bound to right stick down
 - on PSP, it only reduces steering deadzones, there is no keybinding
 
 ### Compability

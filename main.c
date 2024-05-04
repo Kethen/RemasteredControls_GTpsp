@@ -49,8 +49,8 @@ static short int steering_override = 0;
 static int override_camera = 0;
 static float camera_override = 0;
 
-static unsigned char outer_deadzone = 100;
-static unsigned char inner_deadzone = 25;
+static unsigned char outer_deadzone = 114;
+static unsigned char inner_deadzone = 10;
 
 static int camera_controls = 0;
 static int adjacent_axes = 0;
@@ -59,11 +59,12 @@ static int apply_deadzone(int val){
 	if(val < inner_deadzone){
 		return 0;
 	}
+	int range = outer_deadzone - inner_deadzone;
 	val = val - inner_deadzone;
-	if(val > outer_deadzone){
-		val = outer_deadzone;
+	if(val > range){
+		val = range;
 	}
-	return val * 127 / outer_deadzone;
+	return val * 127 / range;
 }
 
 static void sample_input(SceCtrlData *pad_data, int count, int negative){

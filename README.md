@@ -6,16 +6,29 @@
 ### Usage
 
 - load prx with game, see https://www.ppsspp.org/docs/reference/plugins/ for PPSSPP, see https://consolemods.org/wiki/Vita:Adrenaline#Adding_Plugins for PSVita and https://www.reddit.com/r/PSP/wiki/plugins/ for PSP
-- the hooking code may or may not work with a vita
 
 ### Keybinds
 
 - on PPSSPP, throttle is bound to right stick left, brake is bound to right stick down, remap right stick left and down in ppsspp accordingly to your desired throttle and brake control
-	- on windows, please use  version 1.17 and up
-- camera rotation on bumper and cockpit view can additionally be enabled on PPSSPP by creating `ms0:/PSP/GTRemastered_camera_controls.txt`
+	- on windows, please use version 1.17 and up
+- camera rotation on bumper and cockpit view can additionally be enabled on PPSSPP through the settings file
 	- binds to left stick up and down when enabled, remap PPSSPP left stick up and down to your desired camera control inputs accordingly
 - on PSVita, throttle is bound to right stick up, brake is bound to right stick down
 - on PSP, it only reduces steering deadzones, there is no keybinding
+
+### Settings
+
+- one can write `ms0:/PSP/GTRemastered_settings.txt` or `ef0:/PSP/GTRemastered_settings.txt` to modify the plugin's behavior
+```
+<camera control on PPSSPP on/off> <inner analog deadzone 0-127> <outer analog deadzone 0-127>
+```
+
+- eg. enable camera control on PPSSPP, map the start of analog input to 10/127, end of analog input to 117/127
+```
+1 10 117
+```
+
+- 
 
 ### Compability
 - EU v2.00 (UCES01245 2.00)
@@ -38,7 +51,3 @@
 ### Extra game tweaking CWCheat codes
 
 - check the game_tweaks directory of this repository
-
-### TODO
-
-- finish real HW hooking when I have a psp again

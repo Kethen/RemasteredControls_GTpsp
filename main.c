@@ -372,13 +372,101 @@ void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned cha
 	pspSdkSetK1(k1);
 }
 
-int init(){
-	/*
-	if(!is_emulator){
-		sceKernelDelayThread(1000 * 1000 * 5);
-	}
-	*/
+int _atoi(char *buf){
+	int i = 0;
+	int val = 0;
+	int negative = 0;
 
+	if(buf[0] == '-'){
+		negative = 1;
+		i = 1;
+	}
+
+	while(1){
+		if(buf[i] == '\0'){
+			break;
+		}
+		val = val * 10;
+		val = val + (int)(buf[i] - '0');
+		i++;
+	}
+
+	if(negative){
+		val = val * (-1);
+	}
+
+	return val;
+}
+
+void parse_config(){
+    char *path = "ms0:/PSP/"MODULE_NAME"_settings.txt";
+	int fd = sceIoOpen(path, PSP_O_RDONLY, 0);
+	if(fd < 0){
+		LOG("cannot open %s for reading, trying ef0:/", path);
+		path = "ef0:/PSP/"MODULE_NAME"_settings.txt";
+		fd = sceIoOpen(path, PSP_O_RDONLY, 0);
+		if(fd < 0){
+			LOG("cannot open %s for reading either", path);
+			return;
+    	}
+	}
+
+	char buf[1024] = {0};
+	u32 len = sceIoRead(fd, buf, sizeof(buf));
+	if(len < 0){
+		LOG("failed reading %s after opening", path);
+		return;
+	}
+
+	int arg_idx = 0;
+	char arg_buf[1024] = {0};
+	u32 arg_buf_write_head = 0;
+	for(u32 i = 0;i <= len; i++){
+		if(len != sizeof(buf) && buf[i] != ' ' && buf[i] != '\n'){
+			arg_buf[arg_buf_write_head] = buf[i];
+			arg_buf_write_head++;
+		}else{
+		    if(arg_buf_write_head == 0){
+		        continue;
+		    }
+			arg_buf[arg_buf_write_head] = '\0';
+			if(arg_idx == 0){
+				int num = _atoi(arg_buf);
+				camera_controls = num && is_emulator;
+				if(camera_controls){
+				    LOG("enabling camera controls");
+				}else{
+				    LOG("not enabling camera controls");
+				}
+			}else if(arg_idx == 1){
+				int num = _atoi(arg_buf);
+				if(num > 127){
+					num = 127;
+				}
+				if(num < 0){
+					num = 0;
+				}
+				LOG("overriding inner deadzone %d with %d", inner_deadzone, num);
+				inner_deadzone = num;
+			}else if(arg_idx == 2){
+				int num = _atoi(arg_buf);
+				if(num > 127){
+					num = 127;
+				}
+				if(num < 0){
+					num = 0;
+				}
+				LOG("overriding outer deadzone %d with %d", outer_deadzone, num);
+				outer_deadzone = num;
+			}
+
+			arg_buf_write_head = 0;
+			arg_idx++;
+		}
+	}
+}
+
+int init(){
 	char disc_id[50];
 	char disc_version[50];
 	int disc_id_valid = get_disc_id_version(disc_id, disc_version) == 0;
@@ -403,16 +491,8 @@ int init(){
 		adjacent_axes = 1;
 		outer_deadzone = 124;
 		inner_deadzone = 3;
-
-		int fd = sceIoOpen("ms0:/PSP/"MODULE_NAME"_camera_controls.txt", PSP_O_RDONLY, 0);
-		if(fd >= 0){
-			camera_controls = 1;
-			LOG("enabling camera controls");
-			sceIoClose(fd);
-		}else{
-			LOG("not enabling camera controls");
-		}
 	}
+	parse_config();
 
 	//HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);
 	//HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);

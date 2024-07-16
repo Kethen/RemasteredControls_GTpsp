@@ -15,7 +15,7 @@ jobs:
       # install latest pspdev sdk
     - name: Download PSP SDK
       run: |
-        curl -sL https://github.com/pspdev/pspdev/releases/download/latest/pspdev-ubuntu-latest.tar.gz | tar xvz -C ./
+        curl -sL https://github.com/pspdev/pspdev/releases/download/v20240701/pspdev-ubuntu-latest-x86_64.tar.gz | tar xvz -C ./
 
     - name: Set env vars
       run: |

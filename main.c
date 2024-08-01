@@ -411,7 +411,7 @@ void parse_config(){
     	}
 	}
 
-	char buf[1024] = {0};
+	char buf[128] = {0};
 	u32 len = sceIoRead(fd, buf, sizeof(buf));
 	if(len < 0){
 		LOG("failed reading %s after opening", path);
@@ -419,7 +419,7 @@ void parse_config(){
 	}
 
 	int arg_idx = 0;
-	char arg_buf[1024] = {0};
+	char arg_buf[128] = {0};
 	u32 arg_buf_write_head = 0;
 	for(u32 i = 0;i <= len; i++){
 		if(len != sizeof(buf) && buf[i] != ' ' && buf[i] != '\n'){

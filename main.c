@@ -309,7 +309,11 @@ void populate_car_analog_control_patched(u32 param_1, int *param_2, unsigned cha
 		return;
 	}
 
+	#if 0
 	if(is_emulator){
+	#else
+	{
+	#endif
 		SceCtrlData pad_data;
 		int res = sceCtrlPeekBufferPositive(&pad_data, 1);
 		sample_input(&pad_data, res, 0);
@@ -498,9 +502,11 @@ int init(){
 	//HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
 	HIJACK_FUNCTION(offset_populate_car_analog_control, populate_car_analog_control_patched, populate_car_analog_control_orig);
 
+	#if 0
 	if(!is_emulator){
 		HIJACK_SYSCALL_STUB((u32)sceCtrlReadBufferPositive, sceCtrlReadBufferPositivePatched, sceCtrlReadBufferPositiveOrig);
 	}
+	#endif
 
 	if(is_emulator){
 		sceKernelDelayThread(1000 * 1000 * 5);

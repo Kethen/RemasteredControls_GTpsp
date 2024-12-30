@@ -1,0 +1,39 @@
+name: Build package for 4.01 m33
+
+on: [ workflow_dispatch ]
+
+# written referencing apollo save tool psp's CI
+
+jobs:
+  build_pkg:
+    runs-on: ubuntu-22.04
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v3
+
+      # install latest pspdev sdk
+    - name: Download PSP SDK
+      run: |
+        curl -sL https://github.com/pspdev/pspdev/releases/download/v20240701/pspdev-ubuntu-latest-x86_64.tar.gz | tar xvz -C ./
+
+    - name: Set env vars
+      run: |
+        echo "sha_name=$(echo ${GITHUB_SHA} | cut -c1-8)" >> $GITHUB_ENV
+        echo "PSPDEV=${GITHUB_WORKSPACE}/pspdev" >> $GITHUB_ENV
+        echo "${GITHUB_WORKSPACE}/pspdev/bin" >> $GITHUB_PATH
+
+    - name: Build GTRemastered.prx
+      run: |
+        cp m33_sdk_prebuilt/include/* pspdev/psp/sdk/include/
+        cp m33_sdk_prebuilt/lib/* pspdev/psp/sdk/lib/
+        make
+
+    - name: Push package artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: GTRemastered_4.01m33_${{ env.sha_name }}
+        path: |
+           GTRemastered.prx
+           plugin.ini
+        if-no-files-found: error

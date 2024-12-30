@@ -187,22 +187,6 @@ int sceCtrlReadBufferPositivePatched(SceCtrlData *pad_data, int count){
 	return res;
 }
 
-static void log_modules(){
-	SceUID modules[32];
-	SceKernelModuleInfo info;
-	int i, count = 0;
-
-	if (sceKernelGetModuleIdList(modules, sizeof(modules), &count) >= 0) {
-		for (i = 0; i < count; ++i) {
-			info.size = sizeof(SceKernelModuleInfo);
-			if (sceKernelQueryModuleInfo(modules[i], &info) < 0) {
-				continue;
-			}
-			LOG("module #%d: %s", i+1, info.name);
-		}
-	}
-}
-
 int set_offsets(char *disc_id, char *disc_version){
 	LOG("game_base_addr: 0x%lx", game_base_addr);
 	// EU and US v2.00
@@ -488,10 +472,6 @@ int init(){
 	}
 
 	if(is_emulator){
-		log_modules();
-	}
-
-	if(is_emulator){
 		adjacent_axes = 1;
 		outer_deadzone = 124;
 		inner_deadzone = 3;
@@ -519,7 +499,11 @@ int init(){
 }
 
 int StartPSP(SceModule2 *mod) {
+	char modname_buf[sizeof(mod->modname) + 1] = {0};
+	memcpy(modname_buf, mod->modname, sizeof(mod->modname));
+	LOG("PSP module %s", modname_buf);
 	if(strcmp(mod->modname, GAME_MODULE_NAME) == 0){
+		LOG("GTPSP module %s found", modname_buf);
 		game_base_addr = mod->text_addr;
 		// XXX oh no
 		game_base_addr = game_base_addr + 0x28;
@@ -544,11 +528,16 @@ static void StartPPSSPP() {
 			if (sceKernelQueryModuleInfo(modules[i], &info) < 0) {
 				continue;
 			}
+			char namebuf[sizeof(info.name) + 1] = {0};
+			memcpy(namebuf, info.name, sizeof(info.name));
+			LOG("PPSSPP module %s", namebuf);
 			if(strcmp(info.name, GAME_MODULE_NAME) == 0){
+				LOG("GTPSP module %s found", namebuf);
 				game_base_addr = info.text_addr;
-				init();
-				break;
 			}
+		}
+		if(game_base_addr != 0){
+			init();
 		}
 	}
 }

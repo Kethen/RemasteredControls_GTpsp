@@ -35,7 +35,9 @@ PSP_MODULE_INFO(MODULE_NAME, PSP_MODULE_KERNEL, 1, 0);
 
 #define EMULATOR_DEVCTL__IS_EMULATOR     0x00000003
 
+#ifndef IRSHELL
 static STMOD_HANDLER previous;
+#endif
 
 static int is_emulator;
 static u32 game_base_addr = 0;
@@ -498,15 +500,16 @@ int init(){
 	return 0;
 }
 
+#ifndef IRSHELL
 int StartPSP(SceModule2 *mod) {
-	char modname_buf[sizeof(mod->modname) + 1] = {0};
-	memcpy(modname_buf, mod->modname, sizeof(mod->modname));
-	LOG("PSP module %s", modname_buf);
-	if(strcmp(mod->modname, GAME_MODULE_NAME) == 0){
-		LOG("GTPSP module %s found", modname_buf);
+	char namebuf[sizeof(mod->modname) + 1] = {0};
+	memcpy(namebuf, mod->modname, sizeof(mod->modname));
+	LOG("PSP module %s", namebuf);
+	if(strcmp(namebuf, GAME_MODULE_NAME) == 0){
 		game_base_addr = mod->text_addr;
 		// XXX oh no
 		game_base_addr = game_base_addr + 0x28;
+		LOG("GTPSP module %s found, setting base address to 0x%08lx", namebuf, game_base_addr);
 		init();
 	}
 
@@ -516,9 +519,51 @@ int StartPSP(SceModule2 *mod) {
 
 	return previous(mod);
 }
+#else
+int irshell_find_module(SceSize args, void *argp){
+	int cycles = 0;
+	while(cycles < 60){
+		SceUID modules[256] = {0};
+		SceKernelModuleInfo info = {0};
+		int count = 0;
+		LOG("%s: scanning through module list", __func__);
+		if(sceKernelGetModuleIdList(modules, sizeof(modules), &count) >= 0){
+			for(int i = 0;i < count;i++){
+				info.size = sizeof(SceKernelModuleInfo);
+				if(sceKernelQueryModuleInfo(modules[i], &info) < 0){
+					LOG("failed fetching module info for id 0x%08x", modules[i]);
+					continue;
+				}
+				char namebuf[sizeof(info.name) + 1] = {0};
+				memcpy(namebuf, info.name, sizeof(info.name));
+				if(strcmp(namebuf, GAME_MODULE_NAME) == 0){
+					LOG("GTPSP module %s found with text_addr 0x%08x", namebuf, info.text_addr);
+					// XXX I guess ppsspp's value is off
+					game_base_addr = info.text_addr + 0x28;
+				}else{
+					LOG("ignoring module %s", namebuf);
+				}
+			}
+			if(game_base_addr != 0){
+				init();
+				sceKernelExitDeleteThread(0);
+				return 0;
+			}
+		}else{
+			LOG("failed fetching module id list");
+		}
+		LOG("%s: didn't find GTPSP module, trying again in a second", __func__);
+		sceKernelDelayThread(1000 * 1000);
+		cycles++;
+	}
+	LOG("%s: giving up, it has been a whole minute", __func__);
+	sceKernelExitDeleteThread(0);
+	return 0;
+}
+#endif
 
 static void StartPPSSPP() {
-	SceUID modules[32];
+	SceUID modules[256];
 	SceKernelModuleInfo info;
 	int i, count = 0;
 
@@ -531,7 +576,7 @@ static void StartPPSSPP() {
 			char namebuf[sizeof(info.name) + 1] = {0};
 			memcpy(namebuf, info.name, sizeof(info.name));
 			LOG("PPSSPP module %s", namebuf);
-			if(strcmp(info.name, GAME_MODULE_NAME) == 0){
+			if(strcmp(namebuf, GAME_MODULE_NAME) == 0){
 				LOG("GTPSP module %s found", namebuf);
 				game_base_addr = info.text_addr;
 			}
@@ -556,8 +601,18 @@ int module_start(SceSize args, void *argp){
 		LOG("starting in ppsspp mode");
 		StartPPSSPP();
 	}else{
-		LOG("starting in psp mode");
+		#ifndef IRSHELL
+		LOG("starting in psp hen mode");
 		previous = sctrlHENSetStartModuleHandler(StartPSP);
+		#else
+		LOG("starting in psp irshell mode");
+		SceUID thid = sceKernelCreateThread("irshell_find_module", irshell_find_module, 0x18, 0x10000, 0, NULL);
+		if(thid < 0){
+			LOG("failed creating irshell module searching thread");
+			return 0;
+		}
+		sceKernelStartThread(thid, 0, NULL);
+		#endif
 	}
 	return 0;
 }

@@ -196,6 +196,8 @@ int set_offsets(char *disc_id, char *disc_version){
 		offset_digital_to_analog = game_base_addr + 0x14eb40;
 		offset_populate_car_digital_control = game_base_addr + 0x126b50;
 		offset_populate_car_analog_control = game_base_addr + 0x126dec;
+		offset_vibration = game_base_addr + 0x127B74;
+		offset_vibration_global = game_base_addr + 0x4ee948;
 		return 0;
 	}
 
@@ -213,6 +215,43 @@ int set_offsets(char *disc_id, char *disc_version){
 
 	LOG("unknown dics id %s with version %s", disc_id, disc_version);
 	return -1;
+}
+
+// 0892bb9c uces01245v2
+static void (*vibration_orig)(u32 param_1);
+void vibration_patched(u32 param_1){
+	// based on information provided by @Nenkai at https://github.com/Kethen/RemasteredControls_GTpsp/issues/8#issuecomment-2661096600
+	uint32_t setting_byte_offset;
+	uint32_t obj = *(uint32_t*)(param_1 + 0x260);
+	setting_byte_offset = *(uint32_t *)(obj + 0x98);
+
+	uint16_t var2 = *(uint16_t*)(obj + 0x5e);
+	uint16_t var3 = *(uint16_t*)(obj + 0x60);
+
+	static uint8_t logged = 0;
+	if(!logged){
+		logged = 1;
+		LOG("vibration control struct is at 0x%zx, obj at 0x%zx, var2 at 0x%zx, var3 at 0x%zx\n", (size_t)param_1, (size_t)obj, (size_t)obj+0x5e, (size_t)obj+0x60);
+	}
+
+	#if 1
+	// TEST, this block does not work on real hardware, mostly due to not being able to call user module functions
+	// the funcion offset is also version specific
+	if(setting_byte_offset >= 0){
+		static const void (*fun_08b21a4c)(u32) = (void (*)(u32))0x08b21a4c;
+		uint8_t setting = *(uint8_t*)(offset_vibration_global + setting_byte_offset);
+		if(0){
+		//if(setting == 0){
+			*(uint16_t*)(obj + 0x5e) = 0;
+			*(uint16_t*)(obj + 0x60) = 0;
+		}
+		fun_08b21a4c(param_1);
+		*(uint32_t*)(param_1 + 0x6c) = obj + 0x40;
+	}
+	#endif
+
+	LOG("%s: %u %u", __func__, var2, var3);
+
 }
 
 // this maps way smoother than trying to go through the ps3 path, but then it breaks replay and ghost
@@ -483,6 +522,9 @@ int init(){
 	//HIJACK_FUNCTION(offset_digital_to_analog, digital_to_analog_patched, digital_to_analog_orig);
 	//HIJACK_FUNCTION(offset_populate_car_digital_control, populate_car_digital_control_patched, populate_car_digital_control_orig);
 	HIJACK_FUNCTION(offset_populate_car_analog_control, populate_car_analog_control_patched, populate_car_analog_control_orig);
+	if(offset_vibration != 0){
+		HIJACK_FUNCTION(offset_vibration, vibration_patched, vibration_orig);
+	}
 
 	#if 0
 	if(!is_emulator){

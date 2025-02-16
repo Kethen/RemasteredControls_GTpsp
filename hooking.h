@@ -15,6 +15,8 @@ u32 MakeSyscallStub(void *function);
 u32 offset_digital_to_analog = 0;
 u32 offset_populate_car_digital_control = 0;
 u32 offset_populate_car_analog_control = 0;
+u32 offset_vibration = 0;
+u32 offset_vibration_global = 0;
 
 #define HIJACK_FUNCTION(a, f, ptr) \
 { \

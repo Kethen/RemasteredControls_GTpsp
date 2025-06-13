@@ -507,8 +507,10 @@ int StartPSP(SceModule2 *mod) {
 	LOG("PSP module %s", namebuf);
 	if(strcmp(namebuf, GAME_MODULE_NAME) == 0){
 		game_base_addr = mod->text_addr;
-		// XXX oh no
-		game_base_addr = game_base_addr + 0x28;
+		if (!is_emulator){
+			// XXX oh no
+			game_base_addr = game_base_addr + 0x28;
+		}
 		LOG("GTPSP module %s found, setting base address to 0x%08lx", namebuf, game_base_addr);
 		init();
 	}
@@ -596,7 +598,8 @@ int module_start(SceSize args, void *argp){
 
 	is_emulator = sceIoDevctl("kemulator:", EMULATOR_DEVCTL__IS_EMULATOR, NULL, 0, NULL, 0) == 0;
 
-	if (is_emulator) {
+	//if (is_emulator) {
+	if (0) {
 		// Just scan the modules using normal/official syscalls.
 		LOG("starting in ppsspp mode");
 		StartPPSSPP();

@@ -30,7 +30,7 @@ jobs:
         make
 
     - name: Push package artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: GTRemastered_${{ env.sha_name }}
         path: |
